@@ -1,6 +1,10 @@
 .dev-context/
 .terraform/
 .terraform.lock.hcl
+# examples/basic is a deployable root a caller would actually run, so its lock file is
+# committed for reproducibility - modules/monitoring-stack is a reusable module consumed by
+# many different roots, each with their own lock file, so its own stays ignored.
+!examples/basic/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfplan

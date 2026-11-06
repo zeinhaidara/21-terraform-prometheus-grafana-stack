@@ -1,0 +1,173 @@
+rule_files:
+  - ../modules/monitoring-stack/rules/node-pod-health.rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  # NodeNotReady: does not fire while the node stays Ready
+  - interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{condition="Ready", status="true", node="node-1"}'
+        values: "1x15"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NodeNotReady
+        exp_alerts: []
+
+  # NodeNotReady: fires once not-Ready for more than 10m
+  - interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{condition="Ready", status="true", node="node-1"}'
+        values: "0x15"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NodeNotReady
+        exp_alerts:
+          - exp_labels:
+              condition: Ready
+              status: "true"
+              node: node-1
+              severity: critical
+            exp_annotations:
+              summary: "Node node-1 is not ready"
+              description: "Node node-1 has reported a non-Ready status for more than 10 minutes."
+
+  # NodeMemoryPressure: does not fire while clear
+  - interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{condition="MemoryPressure", status="true", node="node-1"}'
+        values: "0x15"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NodeMemoryPressure
+        exp_alerts: []
+
+  # NodeMemoryPressure: fires once set for more than 10m
+  - interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{condition="MemoryPressure", status="true", node="node-1"}'
+        values: "1x15"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NodeMemoryPressure
+        exp_alerts:
+          - exp_labels:
+              condition: MemoryPressure
+              status: "true"
+              node: node-1
+              severity: warning
+            exp_annotations:
+              summary: "Node node-1 has memory pressure"
+              description: "Node node-1 has reported MemoryPressure for more than 10 minutes."
+
+  # NodeDiskPressure: does not fire while clear
+  - interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{condition="DiskPressure", status="true", node="node-1"}'
+        values: "0x15"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NodeDiskPressure
+        exp_alerts: []
+
+  # NodeDiskPressure: fires once set for more than 10m
+  - interval: 1m
+    input_series:
+      - series: 'kube_node_status_condition{condition="DiskPressure", status="true", node="node-1"}'
+        values: "1x15"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NodeDiskPressure
+        exp_alerts:
+          - exp_labels:
+              condition: DiskPressure
+              status: "true"
+              node: node-1
+              severity: warning
+            exp_annotations:
+              summary: "Node node-1 has disk pressure"
+              description: "Node node-1 has reported DiskPressure for more than 10 minutes."
+
+  # PodCrashLooping: does not fire with no restarts
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_container_status_restarts_total{namespace="default", pod="app-1", container="app"}'
+        values: "0x25"
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: PodCrashLooping
+        exp_alerts: []
+
+  # PodCrashLooping: fires once restarts climb past 3 within 15m and stay above for 5m
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_container_status_restarts_total{namespace="default", pod="app-1", container="app"}'
+        values: "0+1x25"
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: PodCrashLooping
+        exp_alerts:
+          - exp_labels:
+              namespace: default
+              pod: app-1
+              container: app
+              severity: critical
+            exp_annotations:
+              summary: "Pod default/app-1 is crash looping"
+              description: "Container app in pod default/app-1 restarted more than 3 times in the last 15 minutes."
+
+  # PodNotReady: does not fire while ready
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_status_ready{condition="true", namespace="default", pod="app-1"}'
+        values: "1x20"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PodNotReady
+        exp_alerts: []
+
+  # PodNotReady: fires once not-ready for more than 15m
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_status_ready{condition="true", namespace="default", pod="app-1"}'
+        values: "0x20"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PodNotReady
+        exp_alerts:
+          - exp_labels:
+              condition: "true"
+              namespace: default
+              pod: app-1
+              severity: warning
+            exp_annotations:
+              summary: "Pod default/app-1 is not ready"
+              description: "Pod default/app-1 has not reported Ready for more than 15 minutes."
+
+  # PodStuckPending: does not fire while not pending
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_status_phase{phase="Pending", namespace="default", pod="app-1"}'
+        values: "0x20"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PodStuckPending
+        exp_alerts: []
+
+  # PodStuckPending: fires once pending for more than 15m
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_status_phase{phase="Pending", namespace="default", pod="app-1"}'
+        values: "1x20"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PodStuckPending
+        exp_alerts:
+          - exp_labels:
+              phase: Pending
+              namespace: default
+              pod: app-1
+              severity: warning
+            exp_annotations:
+              summary: "Pod default/app-1 stuck pending"
+              description: "Pod default/app-1 has been Pending for more than 15 minutes."
