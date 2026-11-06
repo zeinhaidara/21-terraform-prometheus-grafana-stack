@@ -45,9 +45,10 @@ flowchart TD
 
 ## Prerequisites
 
-- Terraform >= 1.9 (tested with 1.15.8).
-- An already-configured `helm` provider (>= 2.12) and `kubernetes` provider (>= 2.27) pointed at
-  the target cluster - this module does not configure either.
+- Terraform >= 1.9 (tested with 1.15.8). CI installs it via `hashicorp/setup-terraform`, pinned
+  to `1.15.8` - no claim is made here about how that action verifies its own download.
+- An already-configured `helm` provider (`~> 3.3`) and `kubernetes` provider (`~> 3.5`) pointed
+  at the target cluster - this module does not configure either.
 - Two Kubernetes Secrets that must already exist in the target namespace before applying:
 
   | Purpose | Example creation command |
@@ -149,6 +150,7 @@ terraform -chdir=examples/basic validate
 terraform init -backend=false
 terraform test
 promtool check rules modules/monitoring-stack/rules/node-pod-health.rules.yml
+promtool test rules tests/rules.test.yml
 jq empty modules/monitoring-stack/dashboards/node-health.json
 jq empty modules/monitoring-stack/dashboards/pod-health.json
 ```
@@ -162,13 +164,27 @@ negative cases, one per validation block (bad namespace, bad chart version, bad 
 bad storage size format, an empty secret key, and an empty secret name) - each asserting the plan
 fails with `expect_failures`.
 
+`promtool test rules` (`tests/rules.test.yml`) covers all six alerts, one case where it fires and
+one where it does not, each: `NodeNotReady`, `NodeMemoryPressure`, `NodeDiskPressure`,
+`PodCrashLooping`, `PodNotReady`, `PodStuckPending` - checking the exact labels and rendered
+annotation text promtool's simulated evaluation produces, not just that the rule file parses.
+
+Dashboards are validated as JSON only (`jq empty`) - that confirms the files parse as valid JSON,
+nothing about whether Grafana would accept them as a valid dashboard schema or render their
+panels correctly.
+
 ## Status
 
 Never applied against a real cluster. Validated only with `terraform fmt`, `terraform validate`,
-`terraform test` against mock providers, `promtool check rules`, and `jq empty` on the dashboard
-JSON. The Helm chart's own rendering, the Grafana sidecar's dashboard discovery, and the
-Alertmanager `url_file` webhook path have not been exercised against a live chart install or a
-real cluster.
+`terraform test` against mock providers, `promtool check rules`, `promtool test rules`, and
+`jq empty` on the dashboard JSON. Dashboards are checked only for being well-formed JSON - `jq`
+does not know Grafana's dashboard schema, so a file that parses fine could still be rejected by
+Grafana or render incorrectly; that path has never been checked against a real Grafana instance.
+The Helm chart's own rendering, the Grafana sidecar's dashboard discovery, and the Alertmanager
+`url_file` webhook path have not been exercised against a live chart install or a real cluster
+either. Terraform itself is installed in CI through `hashicorp/setup-terraform`, pinned to
+version `1.15.8` - how that action verifies its own download is not something this repo claims
+to know.
 
 ## Known limits
 
