@@ -1,5 +1,6 @@
 .dev-context/
 .terraform/
+.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfplan

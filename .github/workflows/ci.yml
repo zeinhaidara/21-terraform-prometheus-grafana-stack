@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: "1.15.8"
+  PROMETHEUS_VERSION: "3.16.0"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # setup-terraform downloads Terraform from HashiCorp's own release endpoint and verifies
+      # it against HashiCorp's published, signed checksums as part of the action itself - no
+      # separate curl/sha256sum step needed for this one. terraform_wrapper: false so the real
+      # terraform binary is on PATH, not the action's output-capturing wrapper script.
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: install promtool
+        run: |
+          curl -sSLO "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz"
+          echo "68727009472a2c02e1ff7f062fd5b3e637285bffc8fc2d340c76fb449d6e0f34  prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" | sha256sum -c -
+          tar -xzf "prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz"
+          sudo mv "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool" /usr/local/bin/promtool
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: terraform init (module)
+        run: terraform -chdir=modules/monitoring-stack init -backend=false
+
+      - name: terraform validate (module)
+        run: terraform -chdir=modules/monitoring-stack validate
+
+      - name: terraform init (example)
+        run: terraform -chdir=examples/basic init -backend=false
+
+      - name: terraform validate (example)
+        run: terraform -chdir=examples/basic validate
+
+      - name: terraform init (tests)
+        run: terraform init -backend=false
+
+      - name: terraform test
+        run: terraform test
+
+      - name: promtool check rules
+        run: promtool check rules modules/monitoring-stack/rules/node-pod-health.rules.yml
+
+      - name: dashboard JSON is well-formed
+        run: |
+          jq empty modules/monitoring-stack/dashboards/node-health.json
+          jq empty modules/monitoring-stack/dashboards/pod-health.json
