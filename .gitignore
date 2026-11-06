@@ -1,0 +1,5 @@
+.dev-context/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
