@@ -1,0 +1,53 @@
+groups:
+  - name: node-health
+    rules:
+      - alert: NodeNotReady
+        expr: kube_node_status_condition{condition="Ready", status="true"} == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node {{ $labels.node }} is not ready"
+          description: "Node {{ $labels.node }} has reported a non-Ready status for more than 10 minutes."
+      - alert: NodeMemoryPressure
+        expr: kube_node_status_condition{condition="MemoryPressure", status="true"} == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node {{ $labels.node }} has memory pressure"
+          description: "Node {{ $labels.node }} has reported MemoryPressure for more than 10 minutes."
+      - alert: NodeDiskPressure
+        expr: kube_node_status_condition{condition="DiskPressure", status="true"} == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node {{ $labels.node }} has disk pressure"
+          description: "Node {{ $labels.node }} has reported DiskPressure for more than 10 minutes."
+  - name: pod-health
+    rules:
+      - alert: PodCrashLooping
+        expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+          description: "Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} restarted more than 3 times in the last 15 minutes."
+      - alert: PodNotReady
+        expr: kube_pod_status_ready{condition="true"} == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is not ready"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has not reported Ready for more than 15 minutes."
+      - alert: PodStuckPending
+        expr: kube_pod_status_phase{phase="Pending"} == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} stuck pending"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has been Pending for more than 15 minutes."
