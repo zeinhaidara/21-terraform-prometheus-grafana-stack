@@ -1,4 +1,4 @@
-# terraform-prometheus-grafana-stack
+# Prometheus/Grafana/Alertmanager stack module
 
 A Terraform module that installs Prometheus, Grafana, and Alertmanager on a Kubernetes cluster
 via the community `kube-prometheus-stack` Helm chart, with pre-configured node/pod health alert
@@ -139,7 +139,7 @@ for the exact cases checked.
 - The dashboard ConfigMaps are keyed by filename (`dashboard-<name>`), so adding or removing a
   file under `dashboards/` changes exactly that one resource, never the others.
 
-## Tests
+## Validation
 
 ```bash
 terraform fmt -check -recursive
@@ -186,7 +186,7 @@ either. Terraform itself is installed in CI through `hashicorp/setup-terraform`,
 version `1.15.8` - how that action verifies its own download is not something this repo claims
 to know.
 
-## Known limits
+## Known limitations
 
 - No Azure/AWS/GCP provider wiring is included - only the table above showing the shape of each.
 - Dashboards are two fixed starter panels each (node/pod health); they are not meant to replace
