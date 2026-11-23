@@ -4,6 +4,10 @@ A Terraform module that installs Prometheus, Grafana, and Alertmanager on a Kube
 via the community `kube-prometheus-stack` Helm chart, with pre-configured node/pod health alert
 rules and two starter dashboards.
 
+Why it matters: a monitoring stack installed by hand on each cluster ends up with different
+chart versions, different alerts and secrets pasted into values files. One module gives every
+cluster the same stack, the same node and pod alerts, and secrets that stay in Kubernetes.
+
 **Scope.** The module is cloud-agnostic: it creates no cloud resources and configures no
 provider itself. The caller supplies already-configured `helm` and `kubernetes` providers,
 pointing at an EKS, AKS, GKE, or any other cluster - see the provider table below. Nothing here
